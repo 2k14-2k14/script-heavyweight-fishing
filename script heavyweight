@@ -1,0 +1,207 @@
+local lp = game:GetService("Players").LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local MainGui = lp.PlayerGui:WaitForChild("MainGui")
+
+getgenv().NWKZ_Anchor     = false
+getgenv().NWKZ_AutoCast   = false
+getgenv().NWKZ_WaterWalk  = false
+getgenv().NWKZ_InfJump    = false
+getgenv().NWKZ_TPWalk     = false
+getgenv().NWKZ_TP_Speed   = 3 -- Tốc độ TP Walk mặc định ban đầu
+
+-- Cấu hình
+local WATER_LEVEL  = 0    -- Đổi nếu map có mực nước khác (thường là 0)
+
+-- ============ GUI ============
+local sg = Instance.new("ScreenGui", lp.PlayerGui)
+sg.Name = "NWKZ_Hub"
+sg.ResetOnSpawn = false
+
+local Main = Instance.new("Frame", sg)
+Main.Size = UDim2.new(0, 200, 0, 360) -- Tăng chiều cao lên để chứa ô nhập tốc độ
+Main.Position = UDim2.new(0.05, 0, 0.3, 0)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Main.Active = true
+Main.Draggable = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "câu cá nặng"
+Title.TextColor3 = Color3.fromRGB(0, 255, 150)
+Title.Font = Enum.Font.GothamBold
+Title.BackgroundTransparency = 1
+
+local function makeBtn(text, y, color)
+    local b = Instance.new("TextButton", Main)
+    b.Name = "UFPLay"
+    b.Size = UDim2.new(0.85, 0, 0, 35)
+    b.Position = UDim2.new(0.075, 0, 0, y)
+    b.Text = text
+    b.BackgroundColor3 = color or Color3.fromRGB(150, 0, 0)
+    b.TextColor3 = Color3.new(1, 1, 1)
+    b.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", b)
+    return b
+end
+
+local AnchorBtn = makeBtn("ANCHOR: OFF",    45)
+local CastBtn   = makeBtn("AUTO CAST: OFF", 90)
+local SellBtn   = makeBtn("SELL ALL",      135, Color3.fromRGB(0, 80, 150))
+local WaterBtn  = makeBtn("WATER WALK: OFF", 180)
+local JumpBtn   = makeBtn("INF JUMP: OFF",   225)
+local SpeedBtn  = makeBtn("TP WALK: OFF",    270)
+
+-- ============ Ô NHẬP TỐC ĐỘ (MỚI) ============
+local SpeedLabel = Instance.new("TextLabel", Main)
+SpeedLabel.Size = UDim2.new(0.3, 0, 0, 35)
+SpeedLabel.Position = UDim2.new(0.075, 0, 0, 315)
+SpeedLabel.Text = "SPEED:"
+SpeedLabel.TextColor3 = Color3.new(1, 1, 1)
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local SpeedInput = Instance.new("TextBox", Main)
+SpeedInput.Size = UDim2.new(0.45, 0, 0, 35)
+SpeedInput.Position = UDim2.new(0.45, 0, 0, 315)
+SpeedInput.Text = tostring(getgenv().NWKZ_TP_Speed)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+SpeedInput.TextColor3 = Color3.new(1, 1, 1)
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextScaled = true
+SpeedInput.PlaceholderText = "Nhập số..."
+Instance.new("UICorner", SpeedInput)
+
+-- Bắt sự kiện khi người dùng nhập xong và bấm Enter hoặc click ra ngoài
+SpeedInput.FocusLost:Connect(function()
+    local val = tonumber(SpeedInput.Text)
+    if val and val > 0 then
+        getgenv().NWKZ_TP_Speed = val
+        SpeedInput.Text = tostring(val)
+    else
+        -- Nếu nhập sai (chữ, số âm...), trả về giá trị cũ
+        SpeedInput.Text = tostring(getgenv().NWKZ_TP_Speed)
+    end
+end)
+
+-- ============ TOGGLE LOGIC ============
+AnchorBtn.MouseButton1Click:Connect(function()
+    getgenv().NWKZ_Anchor = not getgenv().NWKZ_Anchor
+    AnchorBtn.Text = "ANCHOR: " .. (getgenv().NWKZ_Anchor and "ON" or "OFF")
+    AnchorBtn.BackgroundColor3 = getgenv().NWKZ_Anchor and Color3.fromRGB(0, 150, 80) or Color3.fromRGB(150, 0, 0)
+end)
+
+CastBtn.MouseButton1Click:Connect(function()
+    getgenv().NWKZ_AutoCast = not getgenv().NWKZ_AutoCast
+    CastBtn.Text = "AUTO CAST: " .. (getgenv().NWKZ_AutoCast and "ON" or "OFF")
+    CastBtn.BackgroundColor3 = getgenv().NWKZ_AutoCast and Color3.fromRGB(0, 150, 80) or Color3.fromRGB(150, 0, 0)
+end)
+
+SellBtn.MouseButton1Click:Connect(function()
+    RS.Events.SellFish:FireServer("All")
+    SellBtn.Text = "¡VENDIDO!"
+    task.wait(0.5)
+    SellBtn.Text = "SELL ALL"
+end)
+
+WaterBtn.MouseButton1Click:Connect(function()
+    getgenv().NWKZ_WaterWalk = not getgenv().NWKZ_WaterWalk
+    WaterBtn.Text = "WATER WALK: " .. (getgenv().NWKZ_WaterWalk and "ON" or "OFF")
+    WaterBtn.BackgroundColor3 = getgenv().NWKZ_WaterWalk and Color3.fromRGB(0, 150, 80) or Color3.fromRGB(150, 0, 0)
+end)
+
+JumpBtn.MouseButton1Click:Connect(function()
+    getgenv().NWKZ_InfJump = not getgenv().NWKZ_InfJump
+    JumpBtn.Text = "INF JUMP: " .. (getgenv().NWKZ_InfJump and "ON" or "OFF")
+    JumpBtn.BackgroundColor3 = getgenv().NWKZ_InfJump and Color3.fromRGB(0, 150, 80) or Color3.fromRGB(150, 0, 0)
+end)
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    getgenv().NWKZ_TPWalk = not getgenv().NWKZ_TPWalk
+    SpeedBtn.Text = "TP WALK: " .. (getgenv().NWKZ_TPWalk and "ON" or "OFF")
+    SpeedBtn.BackgroundColor3 = getgenv().NWKZ_TPWalk and Color3.fromRGB(0, 150, 80) or Color3.fromRGB(150, 0, 0)
+end)
+
+-- ============ AUTO CAST ============
+task.spawn(function()
+    while task.wait(1) do
+        if getgenv().NWKZ_AutoCast then
+            pcall(function()
+                local char = lp.Character
+                if char and not char:GetAttribute("Fishing") and not MainGui.Fishing.Visible then
+                    RS.Events.Fishing:FireServer()
+                end
+            end)
+        end
+    end
+end)
+
+-- ============ ANCHOR ============
+RunService.RenderStepped:Connect(function()
+    if getgenv().NWKZ_Anchor then
+        pcall(function()
+            local fishingUI = MainGui.Fishing
+            if fishingUI.Visible then
+                local bar = fishingUI.BarFrame.Bar
+                bar.Position = UDim2.new(0.5, 0, bar.Position.Y.Scale, 0)
+                RS.Fishing:FireServer("1")
+            end
+        end)
+    end
+end)
+
+-- ============ ĐI TRÊN NƯỚC ============
+local waterPlatform = Instance.new("Part")
+waterPlatform.Name = "NWKZ_WaterPlatform"
+waterPlatform.Size = Vector3.new(8, 2, 8)
+waterPlatform.Anchored = true
+waterPlatform.CanCollide = true
+waterPlatform.Transparency = 1
+waterPlatform.Color = Color3.fromRGB(0, 200, 255)
+waterPlatform.Material = Enum.Material.Water
+waterPlatform.Position = Vector3.new(0, -500, 0)
+waterPlatform.Parent = workspace
+
+RunService.Heartbeat:Connect(function()
+    local char = lp.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if getgenv().NWKZ_WaterWalk and hrp then
+        waterPlatform.CFrame = CFrame.new(hrp.Position.X, WATER_LEVEL, hrp.Position.Z)
+        waterPlatform.CanCollide = true
+    else
+        waterPlatform.CFrame = CFrame.new(0, -500, 0)
+        waterPlatform.CanCollide = false
+    end
+end)
+
+-- ============ INFINITE JUMP ============
+UIS.JumpRequest:Connect(function()
+    if not getgenv().NWKZ_InfJump then return end
+    local char = lp.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- ============ TP WALK (ĐÃ CẬP NHẬT ĐỂ DÙNG BIẾN TÙY CHỈNH) ============
+RunService.RenderStepped:Connect(function()
+    if getgenv().NWKZ_TPWalk then
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if hrp and hum then
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                -- Sử dụng tốc độ từ biến getgenv().NWKZ_TP_Speed
+                hrp.CFrame = hrp.CFrame + (moveDir * getgenv().NWKZ_TP_Speed)
+            end
+        end
+    end
+end)
